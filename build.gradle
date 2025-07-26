@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.3'
     id 'io.spring.dependency-management' version '1.1.6'
+    id 'jacoco'
 }
 
 group = 'org.example'
@@ -11,6 +12,64 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+}
+
+jacoco {
+    toolVersion = '0.8.12' // 안정적인 최신 버전을 명시하는 것이 좋습니다.
+}
+
+jacocoTestReport {
+    dependsOn(test)
+
+    reports {
+        xml.required.set(true)
+        csv.required.set(true)
+        html.required.set(true)
+
+        xml.destination file(project.layout.buildDirectory.dir("jacoco/index.xml")) as File
+        csv.destination file(project.layout.buildDirectory.dir("jacoco/index.csv")) as File
+        html.destination file(project.layout.buildDirectory.dir("jacoco/index.html")) as File
+    }
+    //테스트 커버리지 제외
+    afterEvaluate {
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, excludes: [
+                            '**/*Exception*',
+                            '**/dto/**',
+                            '**/infrastructure/**'
+                            // ...
+                    ])
+                })
+        )
+    }
+    finalizedBy(jacocoTestCoverageVerification)
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            enabled = true
+
+            limit {
+                counter = "LINE" //라인 커버리지 기준
+                value = "COVEREDRATIO"
+                minimum = 0.05 //최소 % 이상
+            }
+            //테스트 커버리지 제외
+            excludes = [
+                    '*.*Exception',
+                    '*.dto.*',
+                    '*.infrastructure.*'
+                    // ...
+            ]
+        }
+    }
+}
+
+test {
+    finalizedBy 'jacocoTestReport'
+    // ...
 }
 
 configurations {
